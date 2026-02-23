@@ -44,6 +44,7 @@ func main() {
 	r.Get("/healthz", h.Health)
 	r.Get("/", webHandler.IndexPage)
 	r.Post("/api/links", h.CreateLink)
+	r.Get("/api/links/{code}", h.GetLink)
 	r.Get("/api/links/{code}/stats", h.GetStats)
 	r.Get("/qr/{code}.png", h.GetQR)
 	r.Get("/r/{code}", h.Redirect)

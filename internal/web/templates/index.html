@@ -206,7 +206,7 @@
       gap: 8px;
     }
     label{ font-size: 12px; color: var(--muted) }
-    input[type="url"]{
+    input[type="url"], input[type="text"]{
       width: 100%;
       padding: 11px 12px;
       border-radius: 12px;
@@ -216,8 +216,8 @@
       outline: none;
       transition: box-shadow .15s ease, border-color .15s ease;
     }
-    input[type="url"]::placeholder{ color: rgba(255,255,255,.35) }
-    input[type="url"]:focus-visible{
+    input[type="url"]::placeholder, input[type="text"]::placeholder{ color: rgba(255,255,255,.35) }
+    input[type="url"]:focus-visible, input[type="text"]:focus-visible{
       border-color: rgba(124,58,237,.55);
       box-shadow: var(--ring);
     }
@@ -410,7 +410,7 @@
     <div class="hero">
       <div>
         <h1>Gerador e Tracker de QR Code</h1>
-        <p>Informe uma URL, gere um código curto e acompanhe as leituras e redirecionamentos.</p>
+        <p>Informe uma URL, defina um nome para o QR (opcional) e acompanhe leituras e redirecionamentos.</p>
       </div>
       <div class="chip" title="Status do serviço">
         <span class="dot" aria-hidden="true"></span>
@@ -424,7 +424,7 @@
         <div class="hd">
           <div class="title">
             <strong>Criar um QR + link curto</strong>
-            <span>Ex.: https://instagram.com/sualoja</span>
+            <span>Ex.: https://instagram.com/sualoja e nome: campanha-instagram</span>
           </div>
           <span class="badge">POST /api/links</span>
         </div>
@@ -435,8 +435,20 @@
               <label for="target">Target URL</label>
               <input id="target" type="url" name="target_url" placeholder="https://example.com" required />
             </div>
+            <div class="input">
+              <label for="name">Nome do QR (opcional)</label>
+              <input id="name" type="text" name="name" placeholder="campanha-verao-2026" />
+            </div>
 
             <button class="btn btn-primary" type="submit">Gerar</button>
+          </form>
+
+          <form id="lookupForm" autocomplete="off" style="margin-top: 12px;">
+            <div class="input">
+              <label for="lookupCode">Buscar QR existente (code/nome)</label>
+              <input id="lookupCode" type="text" name="lookup_code" placeholder="campanha-verao-2026" required />
+            </div>
+            <button class="btn btn-ghost" type="submit">Buscar</button>
           </form>
 
           <div id="error" class="alert error" role="alert"></div>
@@ -452,7 +464,7 @@
         <div class="hd">
           <div class="title">
             <strong>Resultado</strong>
-            <span>Copie o link curto ou baixe/compartilhe o QR.</span>
+            <span>Dados de criação + estatísticas do QR selecionado.</span>
           </div>
           <span class="badge mono" id="res_code_badge">—</span>
         </div>
@@ -483,6 +495,21 @@
               <div class="v">
                 <a id="res_qr_link" href="#" target="_blank" rel="noopener" class="mono">—</a>
               </div>
+            </div>
+
+            <div class="row">
+              <div class="k">Clicks</div>
+              <div class="v mono" id="res_clicks">—</div>
+            </div>
+
+            <div class="row">
+              <div class="k">Criado em</div>
+              <div class="v mono" id="res_created">—</div>
+            </div>
+
+            <div class="row">
+              <div class="k">Ativo</div>
+              <div class="v mono" id="res_active">—</div>
             </div>
           </div>
 
@@ -525,7 +552,10 @@
   <script>
   (function(){
     const form = document.getElementById('createForm');
+    const lookupForm = document.getElementById('lookupForm');
     const target = document.getElementById('target');
+    const name = document.getElementById('name');
+    const lookupCode = document.getElementById('lookupCode');
     const errBox = document.getElementById('error');
     const result = document.getElementById('result');
 
@@ -535,6 +565,9 @@
     const resShort = document.getElementById('res_short');
     const resQR = document.getElementById('res_qr');
     const resQRLink = document.getElementById('res_qr_link');
+    const resClicks = document.getElementById('res_clicks');
+    const resCreated = document.getElementById('res_created');
+    const resActive = document.getElementById('res_active');
     const openRedirect = document.getElementById('open_redirect');
     const viewStats = document.getElementById('view_stats');
 
@@ -545,6 +578,30 @@
     function clearError(){
       errBox.textContent = '';
       errBox.style.display = 'none';
+    }
+
+    function renderResult(data){
+      const code = data.code;
+      const targetUrl = data.target_url || '—';
+      const shortUrl = data.short_url || ('/r/' + code);
+      const qrUrl = data.qr_url || ('/qr/' + code + '.png');
+
+      resCode.textContent = code || '—';
+      resCodeBadge.textContent = code ? ('#' + code) : '—';
+      resTarget.textContent = targetUrl;
+      resTarget.href = targetUrl;
+      resShort.textContent = shortUrl;
+      resShort.href = shortUrl;
+      resQRLink.textContent = qrUrl;
+      resQRLink.href = qrUrl;
+      resClicks.textContent = String(data.click_count ?? '—');
+      resCreated.textContent = data.created_at || '—';
+      resActive.textContent = data.is_active ? 'sim' : 'nao';
+
+      resQR.src = '/qr/' + code + '.png?ts=' + Date.now();
+      openRedirect.href = '/r/' + code;
+      viewStats.href = '/stats/' + code;
+      result.style.display = 'block';
     }
 
     form.addEventListener('submit', async function(e){
@@ -558,46 +615,54 @@
         return;
       }
 
+      const customName = name.value.trim();
       try{
         const resp = await fetch('/api/links', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({target_url: url})
+          body: JSON.stringify({target_url: url, name: customName})
         });
 
         if(!resp.ok){
           const j = await resp.json().catch(()=>null);
-          showError((j && j.error) ? j.error : ('Erro: ' + resp.status));
+          showError((j && (j.details || j.error)) ? (j.details || j.error) : ('Erro: ' + resp.status));
           return;
         }
 
         const data = await resp.json();
-        const code = data.code;
-
-        resCode.textContent = code || '—';
-        resCodeBadge.textContent = code ? ('#' + code) : '—';
-
-        const targetUrl = data.target_url || url;
-        resTarget.textContent = targetUrl;
-        resTarget.href = targetUrl;
-
-        const shortUrl = data.short_url || ('/r/' + code);
-        resShort.textContent = shortUrl;
-        resShort.href = shortUrl;
-
-        const qrUrl = data.qr_url || ('/qr/' + code + '.png');
-        resQRLink.textContent = qrUrl;
-        resQRLink.href = qrUrl;
-
-        // prevent cached QR preview
-        resQR.src = '/qr/' + code + '.png?ts=' + Date.now();
-
-        openRedirect.href = '/r/' + code;
-        viewStats.href = '/stats/' + code;
-
-        result.style.display = 'block';
+        renderResult(data);
       }catch(err){
         showError('Erro de rede. Verifique sua conexão e tente novamente.');
+      }
+    });
+
+    lookupForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      clearError();
+      result.style.display = 'none';
+
+      const code = lookupCode.value.trim();
+      if(!code){
+        showError('Informe um code/nome para buscar.');
+        return;
+      }
+
+      try{
+        const resp = await fetch('/api/links/' + encodeURIComponent(code));
+        if(!resp.ok){
+          if(resp.status === 404){
+            showError('QR nao encontrado para esse code/nome.');
+            return;
+          }
+          const j = await resp.json().catch(()=>null);
+          showError((j && (j.details || j.error)) ? (j.details || j.error) : ('Erro: ' + resp.status));
+          return;
+        }
+
+        const data = await resp.json();
+        renderResult(data);
+      }catch(err){
+        showError('Erro de rede na busca.');
       }
     });
 
