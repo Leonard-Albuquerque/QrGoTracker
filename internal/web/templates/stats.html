@@ -1,0 +1,74 @@
+{{define "stats.html"}}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stats - {{.Code}}</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial,sans-serif;background:#f6f7fb;color:#111;margin:0}
+    .wrap{max-width:720px;margin:40px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(17,24,39,0.06)}
+    h1{margin:0 0 12px;font-size:20px}
+    .row{margin:8px 0}
+    .muted{color:#6b7280}
+    a.button{display:inline-block;padding:6px 10px;background:#111827;color:#fff;border-radius:6px;text-decoration:none;margin-right:8px}
+    .error{background:#fff1f2;border:1px solid #fecaca;color:#7f1d1d;padding:12px;border-radius:6px;display:none}
+  </style>
+</head>
+<body>
+  <div class="wrap" data-code="{{.Code}}">
+    <h1>Stats: <span id="code">{{.Code}}</span></h1>
+    <div id="error" class="error" role="alert" style="display:none"></div>
+
+    <div id="content" style="display:none">
+      <div class="row"><strong>Target URL:</strong> <a id="target" href="#" target="_blank" rel="noopener"></a></div>
+      <div class="row"><strong>Clicks:</strong> <span id="clicks" class="muted"></span></div>
+      <div class="row"><strong>Created at:</strong> <span id="created" class="muted"></span></div>
+      <div class="row"><strong>Active:</strong> <span id="active" class="muted"></span></div>
+      <div style="margin-top:12px">
+        <a href="/" class="button">Voltar</a>
+        <a id="open_qr" class="button" target="_blank" rel="noopener">Abrir QR</a>
+        <a id="open_redirect" class="button" target="_blank" rel="noopener">Abrir Redirect</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const root = document.querySelector('.wrap');
+    const code = root.dataset.code;
+    const errBox = document.getElementById('error');
+    const content = document.getElementById('content');
+    const targetEl = document.getElementById('target');
+    const clicksEl = document.getElementById('clicks');
+    const createdEl = document.getElementById('created');
+    const activeEl = document.getElementById('active');
+    const openQR = document.getElementById('open_qr');
+    const openRedirect = document.getElementById('open_redirect');
+
+    function showError(msg){ errBox.textContent = msg; errBox.style.display='block' }
+
+    async function load(){
+      try{
+        const resp = await fetch('/api/links/' + encodeURIComponent(code) + '/stats');
+        if(!resp.ok){
+          if(resp.status===404){ showError('Código não encontrado'); return }
+          showError('Erro: ' + resp.status); return
+        }
+        const data = await resp.json();
+        targetEl.textContent = data.target_url; targetEl.href = data.target_url;
+        clicksEl.textContent = data.click_count;
+        createdEl.textContent = data.created_at;
+        activeEl.textContent = data.is_active ? 'sim' : 'não';
+        openQR.href = '/qr/' + code + '.png';
+        openRedirect.href = '/r/' + code;
+        content.style.display = 'block';
+      }catch(err){ showError('Erro de rede') }
+    }
+
+    load();
+  })();
+  </script>
+</body>
+</html>
+{{end}}

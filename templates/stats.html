@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stats - {{.Code}}</title>
+  <style>
+    :root{--accent:#0069ff;--muted:#666}
+    body{font-family:system-ui,Arial,Helvetica,sans-serif;max-width:900px;margin:28px auto;padding:0 16px;color:#222;background:#f7f8fb}
+    h1{font-size:1.3rem;margin:0 0 8px}
+    .box{background:#fff;border:1px solid #e6e9ef;padding:14px;margin-top:14px;border-radius:8px}
+    .error{color:#a00}
+    .result-grid{display:grid;grid-template-columns:1fr 220px;gap:16px;align-items:start}
+    .qr-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;border-radius:6px;background:#fafbff;border:1px dashed #e3e7ff}
+    img.qr{width:200px;height:200px;object-fit:contain;border-radius:6px;border:1px solid #eee}
+    a{margin-right:8px}
+    @media(max-width:760px){.result-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <h1>Stats: {{.Code}}</h1>
+  <div id="error" class="box error" style="display:none"></div>
+  <div id="stats" class="box" style="display:none">
+    <div class="result-grid">
+      <div>
+        <div><strong>Target URL:</strong> <span id="target"></span></div>
+        <div><strong>Click Count:</strong> <span id="clicks"></span></div>
+        <div><strong>Created At:</strong> <span id="created"></span></div>
+        <div><strong>Is Active:</strong> <span id="active"></span></div>
+        <div style="margin-top:12px">
+          <a id="back" href="/">Voltar</a>
+          <a id="open_qr" href="#" target="_blank">Abrir QR</a>
+          <a id="open_redirect" href="#" target="_blank">Abrir Redirect</a>
+        </div>
+      </div>
+      <div class="qr-wrap">
+        <div id="qr_error" style="display:none;color:#a00;margin-bottom:8px"></div>
+        <img id="qrimg" class="qr" src="" alt="QR preview" style="display:none">
+        <a id="download_qr" class="link-btn" href="#" download style="margin-top:10px;display:none">Baixar QR</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const code = '{{.Code}}';
+    const err = document.getElementById('error');
+    const stats = document.getElementById('stats');
+    async function load(){
+      try{
+        const res = await fetch('/api/links/' + encodeURIComponent(code) + '/stats');
+        if(!res.ok){ const d = await res.json().catch(()=>({error:'failed'})); err.textContent = d.error || 'erro'; err.style.display='block'; return }
+        const j = await res.json();
+        document.getElementById('target').textContent = j.target_url;
+        document.getElementById('clicks').textContent = j.click_count;
+        document.getElementById('created').textContent = j.created_at;
+        document.getElementById('active').textContent = j.is_active;
+        const qrPath = '/qr/' + code + '.png';
+        document.getElementById('open_qr').href = qrPath;
+        document.getElementById('open_redirect').href = '/r/' + code;
+        const qrimg = document.getElementById('qrimg');
+        qrimg.onload = function(){ qrimg.style.display='block'; document.getElementById('download_qr').style.display='inline-block' }
+        qrimg.onerror = function(){ qrimg.style.display='none'; const e = document.getElementById('qr_error'); e.textContent='Não foi possível carregar a pré-visualização do QR.'; e.style.display='block' }
+        qrimg.src = qrPath;
+        document.getElementById('download_qr').href = qrPath;
+        stats.style.display='block';
+      }catch(e){ err.textContent = String(e); err.style.display='block' }
+    }
+    load();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gerador e Tracker de Qr-Code</title>
+  <style>
+    :root{--accent:#0069ff;--muted:#666}
+    body{font-family:system-ui,Arial,Helvetica,sans-serif;max-width:900px;margin:28px auto;padding:0 16px;color:#222;background:#f7f8fb}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:1.4rem;margin:0}
+    form{display:flex;gap:8px;align-items:center}
+    input[type=text]{flex:1;padding:10px;border:1px solid #d9dde6;border-radius:6px}
+    button{padding:10px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer}
+    button.secondary{background:#fff;border:1px solid #d9dde6;color:var(--muted)}
+    .box{background:#fff;border:1px solid #e6e9ef;padding:14px;margin-top:14px;border-radius:8px;box-shadow:0 1px 0 rgba(0,0,0,0.02)}
+    .error{color:#a00}
+    .result-grid{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start}
+    .qr-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;border-radius:6px;background:#fafbff;border:1px dashed #e3e7ff}
+    img.qr{width:256px;height:256px;object-fit:contain;border-radius:6px;border:1px solid #eee}
+    .row{display:flex;gap:8px;align-items:center}
+    .meta div{margin-bottom:8px}
+    a.link-btn{display:inline-block;padding:8px 10px;border-radius:6px;background:#f2f4ff;color:var(--accent);text-decoration:none;border:1px solid #e6e9ef}
+    @media(max-width:760px){
+      .result-grid{grid-template-columns:1fr}
+      form{flex-direction:column;align-items:stretch}
+      input[type=text]{width:100%;margin-right:0}
+      .qr-wrap{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Console QR Tracker</h1>
+  </header>
+  <form id="form">
+    <input id="target" type="text" name="target_url" placeholder="https://example.com" required />
+    <div class="row"><button type="submit">Gerar</button></div>
+  </form>
+  <div id="error" class="box error" style="display:none"></div>
+
+  <div id="result" class="box" style="display:none">
+    <div class="result-grid">
+      <div class="meta">
+        <div><strong>Code:</strong> <span id="code"></span></div>
+        <div><strong>Target:</strong> <span id="target_url"></span></div>
+        <div><strong>Short URL:</strong> <a id="short_url" href="#" target="_blank"></a></div>
+        <div><strong>QR URL:</strong> <a id="qr_url" href="#" target="_blank"></a></div>
+        <div style="margin-top:12px">
+          <button id="open_redirect" class="secondary">Abrir Redirect</button>
+          <button id="view_stats" class="secondary">Ver Stats</button>
+        </div>
+      </div>
+      <div class="qr-wrap">
+        <div id="qr_error" style="display:none;color:#a00;margin-bottom:8px"></div>
+        <img id="qrimg" class="qr" src="" alt="QR preview" style="display:none">
+        <a id="download_qr" class="link-btn" href="#" download style="margin-top:10px;display:none">Baixar QR</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const form = document.getElementById('form');
+    const err = document.getElementById('error');
+    const result = document.getElementById('result');
+    const codeEl = document.getElementById('code');
+    const targetEl = document.getElementById('target_url');
+    const shortEl = document.getElementById('short_url');
+    const qrEl = document.getElementById('qr_url');
+    const qrimg = document.getElementById('qrimg');
+    const openBtn = document.getElementById('open_redirect');
+    const statsBtn = document.getElementById('view_stats');
+
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      err.style.display='none'; result.style.display='none';
+      const target = document.getElementById('target').value.trim();
+      if(!target){ err.textContent='Informe uma URL'; err.style.display='block'; return }
+      try{
+        const res = await fetch('/api/links', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target_url:target})});
+        const data = await res.json();
+        if(!res.ok){ err.textContent = data.error || JSON.stringify(data); err.style.display='block'; return }
+        // success
+        codeEl.textContent = data.code;
+        targetEl.textContent = data.target_url;
+        shortEl.href = data.short_url; shortEl.textContent = data.short_url;
+        qrEl.href = data.qr_url; qrEl.textContent = data.qr_url;
+        const qrPath = '/qr/' + data.code + '.png';
+        qrimg.style.display='none';
+        document.getElementById('qr_error').style.display='none';
+        qrimg.onload = function(){ qrimg.style.display='block'; document.getElementById('download_qr').style.display='inline-block' }
+        qrimg.onerror = function(){ qrimg.style.display='none'; const e = document.getElementById('qr_error'); e.textContent='Não foi possível carregar a pré-visualização do QR.'; e.style.display='block'; document.getElementById('download_qr').style.display='none' }
+        qrimg.src = qrPath;
+        document.getElementById('download_qr').href = qrPath;
+        openBtn.onclick = function(ev){ ev.preventDefault(); window.open('/r/' + data.code, '_blank') }
+        statsBtn.onclick = function(ev){ ev.preventDefault(); window.location = '/stats/' + data.code }
+        result.style.display='block';
+      }catch(errs){ err.textContent = String(errs); err.style.display='block' }
+    })
+  })()
+  </script>
+</body>
+</html>

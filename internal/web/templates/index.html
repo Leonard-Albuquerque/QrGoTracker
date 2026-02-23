@@ -1,0 +1,98 @@
+{{define "index.html"}}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Console QR Tracker</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial,sans-serif;background:#f6f7fb;color:#111;margin:0}
+    .wrap{max-width:800px;margin:40px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(17,24,39,0.06)}
+    h1{margin:0 0 12px;font-size:20px}
+    form{display:flex;gap:8px}
+    input[type="url"]{flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px}
+    button{padding:8px 12px;border:0;background:#0b64ff;color:#fff;border-radius:6px;cursor:pointer}
+    .result, .error{margin-top:16px;padding:12px;border-radius:6px}
+    .result{background:#f8fafc;border:1px solid #eef2ff}
+    .error{background:#fff1f2;border:1px solid #fecaca;color:#7f1d1d;display:none}
+    .field{margin:6px 0}
+    img.qr{width:160px;height:160px;border:1px solid #e5e7eb;border-radius:6px}
+    .actions{display:flex;gap:8px;margin-top:8px}
+    a.button{display:inline-block;padding:6px 10px;background:#111827;color:#fff;border-radius:6px;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Console QR Tracker</h1>
+    <form id="createForm">
+      <input id="target" type="url" name="target_url" placeholder="https://example.com" required />
+      <button type="submit">Gerar</button>
+    </form>
+
+    <div id="error" class="error" role="alert" style="display:none"></div>
+
+    <div id="result" class="result" style="display:none">
+      <div class="field"><strong>Code:</strong> <span id="res_code"></span></div>
+      <div class="field"><strong>Target URL:</strong> <a id="res_target" href="#" target="_blank" rel="noopener"></a></div>
+      <div class="field"><strong>Short URL:</strong> <a id="res_short" href="#" target="_blank" rel="noopener"></a></div>
+      <div class="field"><strong>QR URL:</strong> <a id="res_qr_link" href="#" target="_blank" rel="noopener"></a></div>
+      <div class="field"><img id="res_qr" class="qr" src="" alt="QR code preview"></div>
+      <div class="actions">
+        <a id="open_redirect" class="button" target="_blank" rel="noopener">Abrir Redirect</a>
+        <a id="view_stats" class="button">Ver Stats</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const form = document.getElementById('createForm');
+    const target = document.getElementById('target');
+    const errBox = document.getElementById('error');
+    const result = document.getElementById('result');
+    const resCode = document.getElementById('res_code');
+    const resTarget = document.getElementById('res_target');
+    const resShort = document.getElementById('res_short');
+    const resQR = document.getElementById('res_qr');
+    const resQRLink = document.getElementById('res_qr_link');
+    const openRedirect = document.getElementById('open_redirect');
+    const viewStats = document.getElementById('view_stats');
+
+    function showError(msg){ errBox.textContent = msg; errBox.style.display='block' }
+    function clearError(){ errBox.textContent=''; errBox.style.display='none' }
+
+    form.addEventListener('submit', async function(e){
+      e.preventDefault(); clearError(); result.style.display='none';
+      const url = target.value.trim();
+      if(!url){ showError('Informe uma URL válida'); return }
+      try{
+        const resp = await fetch('/api/links', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({target_url: url})
+        });
+        if(!resp.ok){
+          const j = await resp.json().catch(()=>null);
+          showError((j && j.error) ? j.error : ('Erro: ' + resp.status));
+          return
+        }
+        const data = await resp.json();
+        const code = data.code;
+        resCode.textContent = code;
+        resTarget.textContent = data.target_url || url; resTarget.href = data.target_url || url;
+        resShort.textContent = data.short_url || ('/r/'+code); resShort.href = data.short_url || ('/r/'+code);
+        resQRLink.href = data.qr_url || ('/qr/'+code+'.png'); resQRLink.textContent = resQRLink.href;
+        // prevent cached QR
+        resQR.src = '/qr/' + code + '.png?ts=' + Date.now();
+        openRedirect.href = '/r/' + code;
+        viewStats.href = '/stats/' + code;
+        result.style.display = 'block';
+      }catch(err){ showError('Erro de rede') }
+    });
+
+    viewStats.addEventListener('click', function(e){ e.preventDefault(); location.href = this.href });
+  })();
+  </script>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,33 @@
+@host = http://localhost:8080
+
+### Health check
+GET {{host}}/healthz
+Accept: application/json
+
+### UI index
+GET {{host}}/
+
+### Create Link
+POST {{host}}/api/links
+Content-Type: application/json
+
+{
+  "target_url": "https://example.com/page"
+}
+
+### Get Link Stats (API)
+# Substitute "abc123" with the actual link code returned from Create Link
+GET {{host}}/api/links/abc123/stats
+Accept: application/json
+
+### Get QR image
+# Replace abc123 with the actual code
+GET {{host}}/qr/n13c6DG.png
+
+### Redirect (follow to target)
+# This will issue a 302 redirect to the target URL
+GET {{host}}/r/n13c6DG
+
+### UI Stats Page
+# Browser view for link stats
+GET {{host}}/stats/n13c6DG
