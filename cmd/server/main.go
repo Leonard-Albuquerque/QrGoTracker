@@ -48,6 +48,7 @@ func main() {
 	r.Get("/qr/{code}.png", h.GetQR)
 	r.Get("/r/{code}", h.Redirect)
 	r.Get("/stats/{code}", webHandler.StatsPage)
+	r.Handle("/assets/*", webHandler.AssetsHandler())
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
