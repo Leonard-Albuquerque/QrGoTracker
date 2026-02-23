@@ -6,37 +6,440 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Stats - {{.Code}}</title>
   <style>
-    body{font-family:Inter,system-ui,Arial,sans-serif;background:#f6f7fb;color:#111;margin:0}
-    .wrap{max-width:720px;margin:40px auto;padding:20px;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(17,24,39,0.06)}
-    h1{margin:0 0 12px;font-size:20px}
-    .row{margin:8px 0}
-    .muted{color:#6b7280}
-    a.button{display:inline-block;padding:6px 10px;background:#111827;color:#fff;border-radius:6px;text-decoration:none;margin-right:8px}
-    .error{background:#fff1f2;border:1px solid #fecaca;color:#7f1d1d;padding:12px;border-radius:6px;display:none}
+    :root{
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --muted2: rgba(255,255,255,.56);
+      --brand: #7c3aed;
+      --brand2: #22c55e;
+      --danger: #fb7185;
+      --shadow: 0 18px 45px rgba(0,0,0,.35);
+      --ring: 0 0 0 4px rgba(124,58,237,.22);
+      --radius: 16px;
+    }
+
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(900px 520px at 20% -10%, rgba(124,58,237,.35), transparent 60%),
+        radial-gradient(900px 520px at 90% 10%, rgba(34,197,94,.18), transparent 55%),
+        radial-gradient(900px 520px at 40% 110%, rgba(59,130,246,.18), transparent 55%),
+        linear-gradient(180deg, #070b14 0%, var(--bg) 100%);
+      overflow-x:hidden;
+    }
+
+    a{ color:inherit }
+    .container{ max-width: 1060px; margin: 0 auto; padding: 22px 16px 28px }
+    .stack{ display:flex; flex-direction:column; gap:14px }
+
+    /* Header */
+    header.top{
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(7,11,20,.55);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 14px;
+      padding: 0 16px;
+      height: 84px;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width: 260px;
+    }
+
+    .brand img{
+      width: 84px;
+      height: 84px;
+      border-radius: 8px;
+      border: none;
+      box-shadow: none;
+      object-fit: contain;
+      background: transparent;
+    }
+
+    .brand .titles{
+      display:flex;
+      flex-direction:column;
+      line-height:1.1;
+    }
+    .brand .titles strong{ font-size: 14px; letter-spacing: .2px }
+    .brand .titles span{ font-size: 12px; color: var(--muted) }
+
+    nav.main{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      border-radius: 999px;
+    }
+    nav.main a{
+      text-decoration:none;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: var(--muted);
+      transition: background .15s ease, color .15s ease;
+      outline: none;
+    }
+    nav.main a:hover{
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+    }
+    nav.main a:focus-visible{ box-shadow: var(--ring) }
+
+    /* Hero */
+    .hero{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 18px;
+      padding: 18px 0 6px;
+    }
+    .hero h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing: .2px;
+    }
+    .hero p{
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 56ch;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot{
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--brand2);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.18);
+    }
+
+    /* Layout */
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 10px;
+    }
+    @media (min-width: 920px){
+      .grid{
+        grid-template-columns: 1.1fr .9fr;
+        align-items: start;
+      }
+    }
+
+    .card{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    .card .hd .title{
+      display:flex;
+      flex-direction:column;
+      gap: 3px;
+    }
+    .card .hd .title strong{
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .card .hd .title span{
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .card .bd{ padding: 14px }
+
+    /* Form */
+    form{ display:flex; gap: 10px; flex-wrap:wrap }
+    .input{
+      flex: 1 1 320px;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    label{ font-size: 12px; color: var(--muted) }
+    input[type="url"]{
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      color: var(--text);
+      outline: none;
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    input[type="url"]::placeholder{ color: rgba(255,255,255,.35) }
+    input[type="url"]:focus-visible{
+      border-color: rgba(124,58,237,.55);
+      box-shadow: var(--ring);
+    }
+
+    .btn{
+      appearance:none;
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 650;
+      font-size: 13px;
+      cursor:pointer;
+      transition: transform .06s ease, filter .15s ease, background .15s ease;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .btn:active{ transform: translateY(1px) }
+    .btn:focus-visible{ box-shadow: var(--ring); outline: none }
+
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(124,58,237,1) 0%, rgba(99,102,241,1) 55%, rgba(59,130,246,1) 100%);
+      color: white;
+    }
+    .btn-primary:hover{ filter: brightness(1.05) }
+
+    .btn-ghost{
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .btn-ghost:hover{ background: rgba(255,255,255,.08) }
+
+    /* Alerts */
+    .alert{
+      margin-top: 12px;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      display:none;
+    }
+    .alert.error{
+      border-color: rgba(251,113,133,.35);
+      background: rgba(251,113,133,.08);
+      color: rgba(255,255,255,.92);
+    }
+
+    /* Result */
+    .kv{ display:flex; flex-direction:column; gap: 10px }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .row .k{
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 110px;
+    }
+    .row .v{
+      font-size: 13px;
+      color: var(--text);
+      overflow:hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align:right;
+      max-width: 62%;
+    }
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      letter-spacing: .2px;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .qrbox{
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px dashed rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+    }
+    img.qr{
+      width: 168px;
+      height: 168px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+    }
+    .qrmeta{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .qrmeta strong{ font-size: 13px }
+    .qrmeta span{ font-size: 12px; color: var(--muted) }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .actions a{
+      text-decoration:none;
+    }
+
+    /* Footer */
+    footer.creator{
+      margin-top: 18px;
+      padding: 18px 0 28px;
+      color: var(--muted);
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .footer-inner{
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    main.container{ flex: 1 1 auto; display:flex; flex-direction:column; }
   </style>
 </head>
-<body>
-  <div class="wrap" data-code="{{.Code}}">
-    <h1>Stats: <span id="code">{{.Code}}</span></h1>
-    <div id="error" class="error" role="alert" style="display:none"></div>
 
-    <div id="content" style="display:none">
-      <div class="row"><strong>Target URL:</strong> <a id="target" href="#" target="_blank" rel="noopener"></a></div>
-      <div class="row"><strong>Clicks:</strong> <span id="clicks" class="muted"></span></div>
-      <div class="row"><strong>Created at:</strong> <span id="created" class="muted"></span></div>
-      <div class="row"><strong>Active:</strong> <span id="active" class="muted"></span></div>
-      <div style="margin-top:12px">
-        <a href="/" class="button">Voltar</a>
-        <a id="open_qr" class="button" target="_blank" rel="noopener">Abrir QR</a>
-        <a id="open_redirect" class="button" target="_blank" rel="noopener">Abrir Redirect</a>
+<body>
+  <header class="top">
+    <div class="topbar">
+      <div class="brand">
+        <div class="titles">
+          <strong>QR Code • Generator & Tracker</strong>
+          <span>Crie links curtos, gere QR e acompanhe redirecionamentos.</span>
+        </div>
+      </div>
+
+      <nav class="main" aria-label="Navegação principal">
+        <a href="/">Início</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <div>
+        <h1>Stats: <span id="code">{{.Code}}</span></h1>
+        <p class="muted">Detalhes do código e métricas básicas.</p>
+      </div>
+      <div class="chip" title="Status do serviço">
+        <span class="dot" aria-hidden="true"></span>
+        <span>API online</span>
       </div>
     </div>
-  </div>
+
+    <section class="grid" aria-label="Estatísticas">
+      <div class="card">
+        <div class="bd">
+          <div id="error" class="alert error" role="alert" style="display:none"></div>
+
+          <div id="content" style="display:none">
+            <div class="kv">
+              <div class="row"><div class="k">Target URL</div><div class="v"><a id="target" href="#" target="_blank" rel="noopener"></a></div></div>
+              <div class="row"><div class="k">Clicks</div><div class="v" id="clicks"></div></div>
+              <div class="row"><div class="k">Created at</div><div class="v" id="created"></div></div>
+              <div class="row"><div class="k">Active</div><div class="v" id="active"></div></div>
+            </div>
+
+            <div style="margin-top:12px" class="actions">
+              <a href="/" class="btn btn-ghost">Voltar</a>
+              <a id="open_qr" class="btn btn-primary" target="_blank" rel="noopener">Abrir QR</a>
+              <a id="open_redirect" class="btn btn-ghost" target="_blank" rel="noopener">Abrir Redirect</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="creator">
+    <div class="footer-inner">
+      <div class="meta">
+        <strong>Criador:</strong> Seu Nome — Sua Profissão<br>
+        <span>Feito com Go + templates. Sem dependências no front.</span>
+      </div>
+
+      <div class="links">
+        <a href="https://seublog.exemplo" target="_blank" rel="noopener">Blog</a>
+        <a href="https://www.linkedin.com/in/seuusuario" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/seuusuario" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </footer>
 
   <script>
   (function(){
-    const root = document.querySelector('.wrap');
-    const code = root.dataset.code;
+    const root = document.querySelector('#content').closest('.card');
+    const code = document.getElementById('code').textContent;
     const errBox = document.getElementById('error');
     const content = document.getElementById('content');
     const targetEl = document.getElementById('target');
