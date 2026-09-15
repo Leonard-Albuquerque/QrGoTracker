@@ -8,20 +8,29 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/skip2/go-qrcode"
 	"log/slog"
 
 	"qr-tracker/internal/config"
 	"qr-tracker/internal/service"
+	"qr-tracker/internal/ws"
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type LinkHandler struct {
 	svc service.LinkService
 	cfg *config.Config
+	hub *ws.Hub
 }
 
-func NewLinkHandler(svc *service.LinkService, cfg *config.Config) *LinkHandler {
-	return &LinkHandler{svc: *svc, cfg: cfg}
+func NewLinkHandler(svc *service.LinkService, cfg *config.Config, hub *ws.Hub) *LinkHandler {
+	return &LinkHandler{svc: *svc, cfg: cfg, hub: hub}
 }
 
 func (h *LinkHandler) Health(w http.ResponseWriter, r *http.Request) {
@@ -135,6 +144,8 @@ func (h *LinkHandler) Redirect(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.svc.TrackClick(r.Context(), code); err != nil {
 		slog.Warn("track click failed", "err", err)
+	} else if updated, err := h.svc.GetByCode(r.Context(), code); err == nil && updated != nil {
+		h.hub.Broadcast(code, updated.Clicks)
 	}
 	http.Redirect(w, r, link.TargetURL, http.StatusFound)
 }
@@ -159,6 +170,24 @@ func (h *LinkHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(out)
+}
+
+func (h *LinkHandler) StatsWS(w http.ResponseWriter, r *http.Request) {
+	code := chi.URLParam(r, "code")
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	h.hub.Register(code, conn)
+	defer h.hub.Unregister(code, conn)
+
+	for {
+		if _, _, err := conn.ReadMessage(); err != nil {
+			break
+		}
+	}
 }
 
 func httpErrorJSON(w http.ResponseWriter, status int, errMsg, detail string) {

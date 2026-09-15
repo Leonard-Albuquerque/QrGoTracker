@@ -471,7 +471,24 @@
         openQR.href = '/qr/' + code + '.png';
         openRedirect.href = '/r/' + code;
         content.style.display = 'block';
+        connectWS();
       }catch(err){ showError('Erro de rede') }
+    }
+
+    function connectWS(){
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socket = new WebSocket(`${protocol}//${window.location.host}/ws/${encodeURIComponent(code)}`);
+      socket.onmessage = function(event){
+        try{
+          const data = JSON.parse(event.data);
+          if(data && typeof data.click_count !== 'undefined'){
+            clicksEl.textContent = data.click_count;
+          }
+        }catch(e){}
+      };
+      socket.onclose = function(){
+        setTimeout(connectWS, 3000);
+      };
     }
 
     load();

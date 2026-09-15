@@ -16,8 +16,8 @@ import (
 	"qr-tracker/internal/middleware"
 	"qr-tracker/internal/repository"
 	"qr-tracker/internal/service"
-
 	"qr-tracker/internal/web"
+	"qr-tracker/internal/ws"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -31,8 +31,8 @@ func main() {
 	db := database.MustConnect(cfg)
 	repo := repository.NewSQLiteLinkRepository(db)
 	svc := service.NewLinkService(repo, cfg)
-	h := handler.NewLinkHandler(svc, cfg)
-	// init web UI handler (server-side templates embedded)
+	hub := ws.NewHub()
+	h := handler.NewLinkHandler(svc, cfg, hub)
 	webHandler := web.NewWebHandler(cfg)
 
 	r := chi.NewRouter()
@@ -49,6 +49,7 @@ func main() {
 	r.Get("/qr/{code}.png", h.GetQR)
 	r.Get("/r/{code}", h.Redirect)
 	r.Get("/stats/{code}", webHandler.StatsPage)
+	r.Get("/ws/{code}", h.StatsWS)
 	r.Handle("/assets/*", webHandler.AssetsHandler())
 
 	srv := &http.Server{

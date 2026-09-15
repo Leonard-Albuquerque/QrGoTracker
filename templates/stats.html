@@ -64,8 +64,26 @@
         qrimg.src = qrPath;
         document.getElementById('download_qr').href = qrPath;
         stats.style.display='block';
+        connectWS();
       }catch(e){ err.textContent = String(e); err.style.display='block' }
     }
+
+    function connectWS(){
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socket = new WebSocket(`${protocol}//${window.location.host}/ws/${encodeURIComponent(code)}`);
+      socket.onmessage = function(event){
+        try{
+          const data = JSON.parse(event.data);
+          if(data && typeof data.click_count !== 'undefined'){
+            document.getElementById('clicks').textContent = data.click_count;
+          }
+        }catch(e){}
+      };
+      socket.onclose = function(){
+        setTimeout(connectWS, 3000);
+      };
+    }
+
     load();
   })();
   </script>

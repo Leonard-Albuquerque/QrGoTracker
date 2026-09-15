@@ -189,12 +189,13 @@ Retorna uma imagem PNG `256x256` codificando a URL curta com nivel de correcao d
 
 ---
 
-### Interface Web
+### Interface Web e WebSocket
 
-| Rota                | Descricao                                    |
-|---------------------|----------------------------------------------|
-| `GET /`             | Pagina inicial (formulario de criacao)       |
-| `GET /stats/{code}` | Pagina de estatisticas no navegador          |
+| Rota                | Descricao                                              |
+|---------------------|--------------------------------------------------------|
+| `GET /`             | Pagina inicial (formulario de criacao)                 |
+| `GET /stats/{code}` | Pagina de estatisticas no navegador                    |
+| `GET /ws/{code}`    | Conexao WebSocket para atualizacoes de clique ao vivo  |
 
 ---
 
@@ -267,6 +268,7 @@ docker run -p 8080:8085 \
 | Banco de Dados   | SQLite via [modernc/sqlite](https://pkg.go.dev/modernc.org/sqlite) (Go puro, sem CGO) |
 | Geracao de QR    | [skip2/go-qrcode](https://github.com/skip2/go-qrcode)           |
 | Logging          | `log/slog` (JSON estruturado, stdlib)                           |
+| Real-time WS     | [gorilla/websocket](https://github.com/gorilla/websocket)      |
 | IDs Unicos       | `crypto/rand` + `encoding/hex`                                  |
 | Containerizacao  | Docker (Alpine)                                                 |
 
@@ -455,12 +457,13 @@ Returns a `256x256` PNG image encoding the short URL at medium error-correction 
 
 ---
 
-### Web UI
+### Web UI and WebSocket
 
 | Route               | Description                             |
 |---------------------|-----------------------------------------|
 | `GET /`             | Index page (link creation form)         |
 | `GET /stats/{code}` | Browser-friendly statistics page        |
+| `GET /ws/{code}`    | WebSocket connection for live clicks    |
 
 ---
 
@@ -531,5 +534,6 @@ docker run -p 8080:8085 \
 | Database         | SQLite via [modernc/sqlite](https://pkg.go.dev/modernc.org/sqlite) (pure Go, no CGO) |
 | QR Generation    | [skip2/go-qrcode](https://github.com/skip2/go-qrcode)  |
 | Logging          | `log/slog` (structured JSON, stdlib)                    |
+| Real-time WS     | [gorilla/websocket](https://github.com/gorilla/websocket) |
 | Unique IDs       | `crypto/rand` + `encoding/hex`                          |
 | Containerization | Docker (Alpine-based)                                   |
